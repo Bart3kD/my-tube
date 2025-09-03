@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, CheckCircle, Video, AlertCircle } from 'lucide-react';
+import { z } from 'zod';
+import { uploadRequestSchema, ValidationErrors, videoDetailsSchema, videoFileSchema } from '@/types/video.types';
 
 interface VideoUploadProps {
   onUploadComplete?: (videoUrl: string) => void;
@@ -20,7 +22,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [error, setError] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [videoDetails, setVideoDetails] = useState({
     title: '',
     description: ''
@@ -28,7 +30,69 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Drag and drop handlers
+  const clearErrors = () => {
+    setValidationErrors({});
+  };
+
+  const validateFile = (file: File): boolean => {
+    try {
+      videoFileSchema.parse({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      setValidationErrors(prev => ({
+        ...prev,
+        file: undefined,
+        general: undefined
+      }));
+      
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fileError = error.issues[0]?.message || 'Invalid file';
+        setValidationErrors(prev => ({
+          ...prev,
+          file: fileError
+        }));
+      }
+      return false;
+    }
+  };
+
+  const validateVideoDetails = (): boolean => {
+    try {
+      videoDetailsSchema.parse(videoDetails);
+      
+      setValidationErrors(prev => ({
+        ...prev,
+        title: undefined,
+        description: undefined
+      }));
+      
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: ValidationErrors = {};
+        
+        error.issues.forEach(err => {
+          const field = err.path[0] as keyof ValidationErrors;
+          if (field === 'title' || field === 'description') {
+            newErrors[field] = err.message;
+          }
+        });
+        
+        setValidationErrors(prev => ({
+          ...prev,
+          ...newErrors
+        }));
+      }
+      return false;
+    }
+  };
+
+
   const onDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -47,27 +111,17 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   }, []);
 
   const handleFileSelect = useCallback((file: File) => {
-    setError('');
+    clearErrors();
     
-    // Validate file type
-    if (!file.type.startsWith('video/')) {
-      setError('Please select a video file');
-      return;
-    }
-
-    // Validate file size (100MB limit for now)
-    if (file.size > 100 * 1024 * 1024) {
-      setError('File size must be less than 100MB');
-      return;
-    }
-
-    setSelectedFile(file);
-    // Auto-generate title from filename
-    if (!videoDetails.title) {
-      setVideoDetails(prev => ({
-        ...prev,
-        title: file.name.replace(/\.[^/.]+$/, "")
-      }));
+    if (validateFile(file)) {
+      setSelectedFile(file);
+      // Auto-generate title from filename if title is empty
+      if (!videoDetails.title.trim()) {
+        setVideoDetails(prev => ({
+          ...prev,
+          title: file.name.replace(/\.[^/.]+$/, "")
+        }));
+      }
     }
   }, [videoDetails.title]);
 
@@ -81,6 +135,10 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     
     if (videoFile) {
       handleFileSelect(videoFile);
+    } else if (files.length > 0) {
+      setValidationErrors({
+        file: 'Please select a video file'
+      });
     }
   }, [handleFileSelect]);
 
@@ -91,14 +149,58 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     }
   };
 
+  // Handle title change with validation
+  const handleTitleChange = (value: string) => {
+    setVideoDetails(prev => ({ ...prev, title: value }));
+    
+    // Clear title error when user starts typing
+    if (validationErrors.title) {
+      setValidationErrors(prev => ({
+        ...prev,
+        title: undefined
+      }));
+    }
+  };
+
+  // Handle description change with validation
+  const handleDescriptionChange = (value: string) => {
+    setVideoDetails(prev => ({ ...prev, description: value }));
+    
+    // Clear description error when user starts typing
+    if (validationErrors.description) {
+      setValidationErrors(prev => ({
+        ...prev,
+        description: undefined
+      }));
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile || !user) return;
 
+    // Validate everything before upload
+    const isFileValid = validateFile(selectedFile);
+    const areDetailsValid = validateVideoDetails();
+    
+    if (!isFileValid || !areDetailsValid) {
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
-    setError('');
+    clearErrors();
 
     try {
+      // Validate upload request data
+      const uploadData = {
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+        fileSize: selectedFile.size
+      };
+
+      // Validate request data with Zod
+      const validatedUploadData = uploadRequestSchema.parse(uploadData);
+
       // Simulate upload progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
@@ -108,12 +210,8 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
       const response = await fetch('/api/upload/presigned-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Ensure cookies are sent
-        body: JSON.stringify({
-          fileName: selectedFile.name,
-          fileType: selectedFile.type,
-          fileSize: selectedFile.size
-        })
+        credentials: 'include',
+        body: JSON.stringify(validatedUploadData)
       });
 
       if (!response.ok) {
@@ -141,15 +239,15 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           videoId,
-          title: videoDetails.title,
-          description: videoDetails.description,
+          title: videoDetails.title.trim(),
+          description: videoDetails.description?.trim() || '',
           videoUrl,
           fileName: selectedFile.name,
           fileSize: selectedFile.size
         })
       });
 
-      console.log('📨 Database save response status:', metadataResponse.status);
+      // console.log('📨 Database save response status:', metadataResponse.status);
       
       if (!metadataResponse.ok) {
         const dbError = await metadataResponse.json();
@@ -157,7 +255,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         throw new Error('Failed to save video metadata');
       }
 
-      console.log('✅ Video metadata saved successfully!');
+      // console.log('✅ Video metadata saved successfully!');
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -168,6 +266,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         setSelectedFile(null);
         setVideoDetails({ title: '', description: '' });
         setUploadProgress(0);
+        clearErrors();
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -175,11 +274,27 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
 
     } catch (error) {
       console.error('Upload failed:', error);
-      setError(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+      
+      if (error instanceof z.ZodError) {
+        setValidationErrors({
+          general: 'Invalid upload data: ' + error.issues[0]?.message
+        });
+      } else {
+        setValidationErrors({
+          general: error instanceof Error ? error.message : 'Upload failed. Please try again.'
+        });
+      }
     } finally {
       setIsUploading(false);
     }
   };
+
+  // Check if form is valid for upload
+  const isFormValid = selectedFile && 
+    videoDetails.title.trim() && 
+    !validationErrors.file && 
+    !validationErrors.title && 
+    !validationErrors.description;
 
   if (!user) {
     return (
@@ -202,10 +317,11 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         <CardTitle className="text-2xl">Upload Video</CardTitle>
       </CardHeader>
 
-      {error && (
+      {/* General Error Alert */}
+      {validationErrors.general && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{validationErrors.general}</AlertDescription>
         </Alert>
       )}
 
@@ -224,7 +340,9 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
                 ? 'border-primary bg-primary/5' 
                 : selectedFile 
                   ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                  : validationErrors.file
+                    ? 'border-red-500 bg-red-50 dark:bg-red-950'
+                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
               }
             `}
           >
@@ -248,7 +366,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                <Upload className={`w-12 h-12 mx-auto ${validationErrors.file ? 'text-red-500' : 'text-muted-foreground'}`} />
                 <div>
                   <p className="text-lg font-medium">
                     Drop your video here, or click to browse
@@ -256,6 +374,9 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
                   <p className="text-sm text-muted-foreground">
                     Supports MP4, MOV, AVI (max 100MB)
                   </p>
+                  {validationErrors.file && (
+                    <p className="text-sm text-red-500 mt-2">{validationErrors.file}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -280,10 +401,14 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
               <Input
                 id="title"
                 value={videoDetails.title}
-                onChange={(e) => setVideoDetails(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Enter video title"
                 required
+                className={validationErrors.title ? 'border-red-500 focus:border-red-500' : ''}
               />
+              {validationErrors.title && (
+                <p className="text-sm text-red-500">{validationErrors.title}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -293,10 +418,14 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
               <Textarea
                 id="description"
                 value={videoDetails.description}
-                onChange={(e) => setVideoDetails(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
                 placeholder="Describe your video (optional)"
                 rows={4}
+                className={validationErrors.description ? 'border-red-500 focus:border-red-500' : ''}
               />
+              {validationErrors.description && (
+                <p className="text-sm text-red-500">{validationErrors.description}</p>
+              )}
             </div>
 
             {/* Upload Progress */}
@@ -312,7 +441,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
             {/* Upload Button */}
             <Button
               onClick={handleUpload}
-              disabled={isUploading || !videoDetails.title.trim()}
+              disabled={isUploading || !isFormValid}
               className="w-full"
               size="lg"
             >
@@ -328,6 +457,13 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
                 </>
               )}
             </Button>
+
+            {/* Form validation status */}
+            {!isFormValid && selectedFile && (
+              <p className="text-sm text-muted-foreground text-center">
+                Please fix validation errors before uploading
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
