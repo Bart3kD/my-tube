@@ -44,5 +44,5 @@ export const ALLOWED_VIDEO_TYPES = [
 ] as const;
 
 export function isValidVideoType(mimeType: string): boolean {
-  return ALLOWED_VIDEO_TYPES.includes(mimeType as any);
+  return (ALLOWED_VIDEO_TYPES as readonly string[]).includes(mimeType);
 }

@@ -46,20 +46,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     e.stopPropagation();
   }, []);
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const videoFile = files.find(file => file.type.startsWith('video/'));
-    
-    if (videoFile) {
-      handleFileSelect(videoFile);
-    }
-  }, []);
-
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setError('');
     
     // Validate file type
@@ -82,7 +69,20 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         title: file.name.replace(/\.[^/.]+$/, "")
       }));
     }
-  };
+  }, [videoDetails.title]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const videoFile = files.find(file => file.type.startsWith('video/'));
+    
+    if (videoFile) {
+      handleFileSelect(videoFile);
+    }
+  }, [handleFileSelect]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,13 +104,6 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      // console.log('📤 About to call presigned URL API...');
-      // console.log('📋 Request payload:', {
-      //   fileName: selectedFile.name,
-      //   fileType: selectedFile.type,
-      //   fileSize: selectedFile.size
-      // });
-
       // Get presigned URL
       const response = await fetch('/api/upload/presigned-url', {
         method: 'POST',
@@ -123,20 +116,15 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         })
       });
 
-      // console.log('📨 Response status:', response.status);
-      // console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Presigned URL error:', errorData);
+        console.error('Presigned URL error:', errorData);
         throw new Error(errorData.error || 'Failed to get upload URL');
       }
 
       const { uploadUrl, videoUrl, videoId } = await response.json();
-      // console.log('✅ Got presigned URL response:', { videoId, videoUrl });
 
       // Upload to S3
-      // console.log('📤 Starting S3 upload...');
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         body: selectedFile,
@@ -145,18 +133,9 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         }
       });
 
-      // console.log('📨 S3 upload response status:', uploadResponse.status);
-      
-      if (!uploadResponse.ok) {
-        const s3Error = await uploadResponse.text();
-        console.error('❌ S3 upload failed:', s3Error);
-        throw new Error('Failed to upload file to S3');
-      }
-
-      // console.log('✅ S3 upload successful!');
+      if (!uploadResponse.ok) throw new Error('Failed to upload file');
 
       // Save video metadata to database
-      // console.log('💾 Saving metadata to database...');
       const metadataResponse = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,7 +149,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         })
       });
 
-      // console.log('📨 Database save response status:', metadataResponse.status);
+      console.log('📨 Database save response status:', metadataResponse.status);
       
       if (!metadataResponse.ok) {
         const dbError = await metadataResponse.json();
@@ -178,13 +157,13 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         throw new Error('Failed to save video metadata');
       }
 
-      // console.log('✅ Video metadata saved successfully!');
+      console.log('✅ Video metadata saved successfully!');
 
       clearInterval(progressInterval);
       setUploadProgress(100);
       onUploadComplete?.(videoUrl);
 
-      // console.log('🎉 Upload completed successfully!');
+      console.log('🎉 Upload completed successfully!');
       setTimeout(() => {
         setSelectedFile(null);
         setVideoDetails({ title: '', description: '' });
