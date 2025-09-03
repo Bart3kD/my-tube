@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { CreateVideoData, createVideoSchema, GetVideosQuery, getVideosQuerySchema } from '@/types/videos.api.types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +17,28 @@ export async function POST(request: NextRequest) {
 
     const userId = authUser.id;
 
-    // Parse request body
+    // Parse and validate request body
+    const body = await request.json();
+    
+    let validatedData: CreateVideoData;
+    try {
+      validatedData = createVideoSchema.parse(body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { 
+            error: 'Validation failed',
+            details: error.issues.map(err => ({
+              field: err.path.join('.'),
+              message: err.message
+            }))
+          }, 
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
     const { 
       videoId, 
       title, 
@@ -23,38 +46,7 @@ export async function POST(request: NextRequest) {
       videoUrl, 
       fileName, 
       fileSize 
-    } = await request.json();
-
-    // Validate required fields
-    if (!videoId || !title || !videoUrl) {
-      return NextResponse.json(
-        { error: 'Missing required fields: videoId, title, videoUrl' }, 
-        { status: 400 }
-      );
-    }
-
-    // Validate title length
-    if (title.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Title cannot be empty' }, 
-        { status: 400 }
-      );
-    }
-
-    if (title.length > 200) {
-      return NextResponse.json(
-        { error: 'Title must be less than 200 characters' }, 
-        { status: 400 }
-      );
-    }
-
-    // Validate description length if provided
-    if (description && description.length > 5000) {
-      return NextResponse.json(
-        { error: 'Description must be less than 5000 characters' }, 
-        { status: 400 }
-      );
-    }
+    } = validatedData;
 
     // Check if user exists in database
     const dbUser = await prisma.user.findUnique({
@@ -84,18 +76,14 @@ export async function POST(request: NextRequest) {
     const video = await prisma.video.create({
       data: {
         id: videoId,
-        title: title.trim(),
-        description: description?.trim() || null,
+        title,
+        description: description || null,
         videoUrl,
         userId,
         isPublic: true, // Default to public, can be changed later
-        // Additional metadata we can store
-        ...(fileName && { 
-          // You could add a fileName field to your schema if needed
-        }),
-        ...(fileSize && {
-          // You could add a fileSize field to your schema if needed
-        })
+        // Add fileName and fileSize if your schema supports them
+        // fileName,
+        // fileSize,
       },
       include: {
         user: {
@@ -160,12 +148,49 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    
+    // Extract and validate query parameters
+    const queryParams = {
+      userId: searchParams.get('userId') || undefined,
+      limit: searchParams.get('limit') || undefined,
+      offset: searchParams.get('offset') || undefined,
+      isPublic: searchParams.get('isPublic') || undefined
+    };
+
+    let validatedQuery: GetVideosQuery;
+    try {
+      validatedQuery = getVideosQuerySchema.parse(queryParams);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid query parameters',
+            details: error.issues.map(err => ({
+              field: err.path.join('.'),
+              message: err.message
+            }))
+          }, 
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
+    const { userId, limit, offset, isPublic } = validatedQuery;
 
     // Build where clause
-    const where = userId ? { userId, isPublic: true } : { isPublic: true };
+    const where: any = {};
+    
+    if (userId) {
+      where.userId = userId;
+    }
+    
+    if (isPublic !== undefined) {
+      where.isPublic = isPublic;
+    } else {
+      // Default to public videos only
+      where.isPublic = true;
+    }
 
     // Fetch videos with user information
     const videos = await prisma.video.findMany({
@@ -190,7 +215,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc'
       },
-      take: Math.min(limit, 50), // Max 50 videos per request
+      take: limit,
       skip: offset
     });
 
