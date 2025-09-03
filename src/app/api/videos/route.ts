@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { CreateVideoData, createVideoSchema, GetVideosQuery, getVideosQuerySchema } from '@/types/videos.api.types';
 
+type VideoWhereClause = {
+  userId?: string;
+  isPublic?: boolean;
+};
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -43,9 +48,7 @@ export async function POST(request: NextRequest) {
       videoId, 
       title, 
       description, 
-      videoUrl, 
-      fileName, 
-      fileSize 
+      videoUrl,
     } = validatedData;
 
     // Check if user exists in database
@@ -179,7 +182,7 @@ export async function GET(request: NextRequest) {
     const { userId, limit, offset, isPublic } = validatedQuery;
 
     // Build where clause
-    const where: any = {};
+    const where: VideoWhereClause = {};
     
     if (userId) {
       where.userId = userId;
