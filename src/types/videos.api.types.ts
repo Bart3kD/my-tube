@@ -23,6 +23,10 @@ export const createVideoSchema = z.object({
     .url('Invalid video URL')
     .min(1, 'Video URL is required'),
 
+  thumbnailUrl: z
+    .url('Invalid video URL')
+    .optional(),
+
   fileName: z
     .string()
     .max(255, 'File name must be less than 255 characters')
