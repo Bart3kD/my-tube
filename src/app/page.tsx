@@ -4,43 +4,6 @@ import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-xl font-bold text-red-600">
-                YourTube
-              </Link>
-              <nav className="hidden md:flex space-x-6">
-                <Link href="/" className="text-gray-700 hover:text-gray-900">
-                  Home
-                </Link>
-                <Link href="/upload" className="text-gray-700 hover:text-gray-900">
-                  Upload
-                </Link>
-                <Link href="/videos" className="text-gray-700 hover:text-gray-900">
-                  Videos
-                </Link>
-              </nav>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <SignedOut>
-                <SignInButton>
-                  <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                    Sign In
-                  </button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">

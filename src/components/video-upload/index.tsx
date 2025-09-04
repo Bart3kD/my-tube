@@ -8,9 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, CheckCircle, Video, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, Video, AlertCircle, Image } from 'lucide-react';
 import { z } from 'zod';
-import { uploadRequestSchema, ValidationErrors, videoDetailsSchema, videoFileSchema } from '@/types/video.types';
+import { thumbnailFileSchema, uploadRequestSchema, ValidationErrors, videoDetailsSchema, videoFileSchema } from '@/types/video.types';
 
 interface VideoUploadProps {
   onUploadComplete?: (videoUrl: string) => void;
@@ -25,10 +25,12 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [videoDetails, setVideoDetails] = useState({
     title: '',
-    description: ''
+    description: '',
+    thumbnail: null as File | null
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   const clearErrors = () => {
     setValidationErrors({});
@@ -61,9 +63,38 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     }
   };
 
+  const validateThumbnail = (file: File): boolean => {
+    try {
+      thumbnailFileSchema.parse({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      setValidationErrors(prev => ({
+        ...prev,
+        thumbnail: undefined
+      }));
+      
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const thumbnailError = error.issues[0]?.message || 'Invalid thumbnail';
+        setValidationErrors(prev => ({
+          ...prev,
+          thumbnail: thumbnailError
+        }));
+      }
+      return false;
+    }
+  };
+
   const validateVideoDetails = (): boolean => {
     try {
-      videoDetailsSchema.parse(videoDetails);
+      videoDetailsSchema.parse({
+        title: videoDetails.title,
+        description: videoDetails.description
+      });
       
       setValidationErrors(prev => ({
         ...prev,
@@ -92,7 +123,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     }
   };
 
-
+  // Drag and drop handlers
   const onDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -175,14 +206,41 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     }
   };
 
+  // Handle thumbnail change with validation
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (!file) {
+      setVideoDetails(prev => ({ ...prev, thumbnail: null }));
+      setValidationErrors(prev => ({
+        ...prev,
+        thumbnail: undefined
+      }));
+      return;
+    }
+
+    if (validateThumbnail(file)) {
+      setVideoDetails(prev => ({ ...prev, thumbnail: file }));
+    } else {
+      // Clear the input if validation fails
+      e.target.value = '';
+      setVideoDetails(prev => ({ ...prev, thumbnail: null }));
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile || !user) return;
 
     // Validate everything before upload
     const isFileValid = validateFile(selectedFile);
     const areDetailsValid = validateVideoDetails();
+    let isThumbnailValid = true;
     
-    if (!isFileValid || !areDetailsValid) {
+    if (videoDetails.thumbnail) {
+      isThumbnailValid = validateThumbnail(videoDetails.thumbnail);
+    }
+    
+    if (!isFileValid || !areDetailsValid || !isThumbnailValid) {
       return;
     }
 
@@ -201,29 +259,28 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
       // Validate request data with Zod
       const validatedUploadData = uploadRequestSchema.parse(uploadData);
 
-      // Simulate upload progress for better UX
+      // Simulate upload progress
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+        setUploadProgress(prev => Math.min(prev + 5, 85));
+      }, 300);
 
-      // Get presigned URL
-      const response = await fetch('/api/upload/presigned-url', {
+      // Step 1: Get presigned URL for video
+      const videoResponse = await fetch('/api/upload/presigned-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(validatedUploadData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Presigned URL error:', errorData);
-        throw new Error(errorData.error || 'Failed to get upload URL');
+      if (!videoResponse.ok) {
+        const errorData = await videoResponse.json();
+        throw new Error(errorData.error || 'Failed to get video upload URL');
       }
 
-      const { uploadUrl, videoUrl, videoId } = await response.json();
+      const { uploadUrl, videoUrl, videoId } = await videoResponse.json();
 
-      // Upload to S3
-      const uploadResponse = await fetch(uploadUrl, {
+      // Step 2: Upload video to S3
+      const videoUploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         body: selectedFile,
         headers: {
@@ -231,9 +288,44 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
         }
       });
 
-      if (!uploadResponse.ok) throw new Error('Failed to upload file');
+      if (!videoUploadResponse.ok) {
+        throw new Error('Failed to upload video');
+      }
 
-      // Save video metadata to database
+      setUploadProgress(90);
+
+      // Step 3: Upload thumbnail if exists
+      let thumbnailUrl = null;
+      if (videoDetails.thumbnail) {
+        const thumbnailResponse = await fetch('/api/upload/thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoId,
+            fileName: videoDetails.thumbnail.name,
+            fileType: videoDetails.thumbnail.type,
+            fileSize: videoDetails.thumbnail.size
+          })
+        });
+
+        if (thumbnailResponse.ok) {
+          const { uploadUrl: thumbUploadUrl, thumbnailUrl: thumbUrl } = await thumbnailResponse.json();
+          
+          const thumbUpload = await fetch(thumbUploadUrl, {
+            method: 'PUT',
+            body: videoDetails.thumbnail,
+            headers: { 'Content-Type': videoDetails.thumbnail.type }
+          });
+
+          if (thumbUpload.ok) {
+            thumbnailUrl = thumbUrl;
+          }
+        }
+      }
+
+      setUploadProgress(95);
+
+      // Step 4: Save video metadata to database
       const metadataResponse = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -242,33 +334,33 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
           title: videoDetails.title.trim(),
           description: videoDetails.description?.trim() || '',
           videoUrl,
+          thumbnailUrl,
           fileName: selectedFile.name,
           fileSize: selectedFile.size
         })
       });
-
-      // console.log('📨 Database save response status:', metadataResponse.status);
       
       if (!metadataResponse.ok) {
         const dbError = await metadataResponse.json();
-        console.error('❌ Database save failed:', dbError);
+        console.error('Database save failed:', dbError);
         throw new Error('Failed to save video metadata');
       }
-
-      // console.log('✅ Video metadata saved successfully!');
 
       clearInterval(progressInterval);
       setUploadProgress(100);
       onUploadComplete?.(videoUrl);
 
-      console.log('🎉 Upload completed successfully!');
+      // Reset form after success
       setTimeout(() => {
         setSelectedFile(null);
-        setVideoDetails({ title: '', description: '' });
+        setVideoDetails({ title: '', description: '', thumbnail: null });
         setUploadProgress(0);
         clearErrors();
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
+        }
+        if (thumbnailInputRef.current) {
+          thumbnailInputRef.current.value = '';
         }
       }, 2000);
 
@@ -294,7 +386,8 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
     videoDetails.title.trim() && 
     !validationErrors.file && 
     !validationErrors.title && 
-    !validationErrors.description;
+    !validationErrors.description &&
+    !validationErrors.thumbnail;
 
   if (!user) {
     return (
@@ -426,6 +519,33 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
               {validationErrors.description && (
                 <p className="text-sm text-red-500">{validationErrors.description}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="thumbnail" className="text-sm font-medium">
+                Thumbnail (optional)
+              </label>
+              <Input
+                ref={thumbnailInputRef}
+                id="thumbnail"
+                type="file"
+                accept="image/*"
+                onChange={handleThumbnailChange}
+                className={validationErrors.thumbnail ? 'border-red-500 focus:border-red-500' : ''}
+              />
+              {videoDetails.thumbnail && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Image className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  {videoDetails.thumbnail.name} ({(videoDetails.thumbnail.size / (1024 * 1024)).toFixed(2)} MB)
+                </div>
+              )}
+              {validationErrors.thumbnail && (
+                <p className="text-sm text-red-500">{validationErrors.thumbnail}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Upload a custom thumbnail image (JPG, PNG, max 5MB)
+              </p>
             </div>
 
             {/* Upload Progress */}
