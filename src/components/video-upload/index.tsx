@@ -535,7 +535,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
               />
               {videoDetails.thumbnail && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Image className="w-4 h-4" />
+                  <Image className="w-4 h-4"/>
                   <CheckCircle className="w-4 h-4 text-green-600" />
                   {videoDetails.thumbnail.name} ({(videoDetails.thumbnail.size / (1024 * 1024)).toFixed(2)} MB)
                 </div>

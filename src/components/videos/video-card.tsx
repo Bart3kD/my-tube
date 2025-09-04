@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Eye, ThumbsUp, Clock, User } from 'lucide-react';
 import { Video } from '@/types/video.types';
+import Image from 'next/image';
 
 interface VideoCardProps {
   video: Video;
@@ -53,7 +53,7 @@ export function VideoCard({ video }: VideoCardProps) {
         {/* Thumbnail */}
         <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden">
           {video.thumbnailUrl && !imageError ? (
-            <img
+            <Image
               src={video.thumbnailUrl}
               alt={video.title}
               className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -91,7 +91,7 @@ export function VideoCard({ video }: VideoCardProps) {
           <div className="flex gap-3">
             <div className="flex-shrink-0">
               {video.user.avatar ? (
-                <img
+                <Image
                   src={video.user.avatar}
                   alt={video.user.displayName}
                   className="w-10 h-10 rounded-full object-cover"
