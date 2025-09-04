@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       title, 
       description, 
       videoUrl,
+      thumbnailUrl,
     } = validatedData;
 
     // Check if user exists in database
@@ -82,11 +83,9 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         videoUrl,
+        thumbnailUrl: thumbnailUrl || null,  // Add this line
         userId,
-        isPublic: true, // Default to public, can be changed later
-        // Add fileName and fileSize if your schema supports them
-        // fileName,
-        // fileSize,
+        isPublic: true,
       },
       include: {
         user: {
@@ -230,8 +229,8 @@ export async function GET(request: NextRequest) {
         id: video.id,
         title: video.title,
         description: video.description,
-        thumbnail: video.thumbnail,
         videoUrl: video.videoUrl,
+        thumbnailUrl: video.thumbnailUrl,
         duration: video.duration,
         views: video.views,
         likes: video.likes,
