@@ -1,7 +1,8 @@
+// api/webhooks/clerk/route.ts
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
-import { createUser, updateUser, deleteUser } from '@/lib/database/user-operations';
+import { prisma } from '@/lib/database/prisma';
 
 async function verifyWebhook(req: Request): Promise<WebhookEvent> {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -30,43 +31,39 @@ async function verifyWebhook(req: Request): Promise<WebhookEvent> {
   }) as WebhookEvent;
 }
 
-function formatUserData(userData: any) {
-  const { id, email_addresses, username, first_name, last_name, image_url } = userData;
-  
-  return {
-    id,
-    email: email_addresses[0]?.email_address || '',
-    username: username || id,
-    displayName: first_name && last_name 
-      ? `${first_name} ${last_name}` 
-      : first_name || username || 'Anonymous',
-    avatar: image_url,
-  };
+function formatDisplayName(first_name: string | null, last_name: string | null, username: string | null, id: string) {
+  if (first_name && last_name) {
+    return `${first_name} ${last_name}`;
+  }
+  return first_name || username || 'Anonymous';
 }
 
 export async function POST(req: Request) {
   try {
     const evt = await verifyWebhook(req);
 
-    switch (evt.type) {
-      case 'user.created':
-        const newUserData = formatUserData(evt.data);
-        await createUser(newUserData);
-        break;
+    if (evt.type === 'user.created' || evt.type === 'user.updated') {
+      const { id, email_addresses, username, first_name, last_name, image_url } = evt.data;
 
-      case 'user.updated':
-        const updatedUserData = formatUserData(evt.data);
-        await updateUser(evt.data.id, updatedUserData);
-        break;
+      const userData = {
+        id,
+        email: email_addresses[0]?.email_address || '',
+        username: username || id,
+        displayName: formatDisplayName(first_name, last_name, username, id),
+        avatar: image_url,
+      };
 
-      case 'user.deleted':
-        if (evt.data.id) {
-          await deleteUser(evt.data.id);
-        }
-        break;
+      await prisma.user.upsert({
+        where: { id },
+        create: userData,
+        update: userData,
+      });
+    }
 
-      default:
-        console.log(`Unhandled webhook type: ${evt.type}`);
+    if (evt.type === 'user.deleted') {
+      await prisma.user.delete({
+        where: { id: evt.data.id },
+      });
     }
 
     return new Response('OK', { status: 200 });
@@ -80,7 +77,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return new Response('Webhook processing failed', { status: 500 });
+    return new Response('Database error', { status: 500 });
   }
 }
 
