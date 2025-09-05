@@ -9,6 +9,15 @@ import { generateId } from '@/lib/utils';
 import z from 'zod';
 import { uploadVideoRequestSchema } from '@/types/upload/video.types';
 
+import { handleError as baseHandleError } from '@/lib/utils';
+
+
+const VALIDATION_ERROR = 'Video validation failed';
+const SERVER_ERROR = 'Failed to generate upload URL for video';
+
+const handleError = (error: unknown) => 
+  baseHandleError(error, VALIDATION_ERROR, SERVER_ERROR);
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,20 +69,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
-    }
-
-    console.error('Presigned URL generation for video failed:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate upload URL',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
-      { status: 500 }
-    );
+      handleError(error)
   }
 }

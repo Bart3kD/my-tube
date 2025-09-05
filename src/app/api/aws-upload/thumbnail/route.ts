@@ -5,8 +5,17 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, BUCKET_NAME, S3_FOLDERS } from '@/lib/s3';
 
-import z from 'zod';
 import { uploadThumbnailRequestSchema } from '@/types/upload/thumbnail.types';
+
+import { handleError as baseHandleError } from '@/lib/utils';
+
+
+const VALIDATION_ERROR = 'Thumbnail validation failed';
+const SERVER_ERROR = 'Failed to generate upload URL for thumbnail';
+
+const handleError = (error: unknown) => 
+  baseHandleError(error, VALIDATION_ERROR, SERVER_ERROR);
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,20 +63,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-      if (error instanceof z.ZodError) {
-        return NextResponse.json(
-          { error: error.issues[0].message },
-          { status: 400 }
-        );
-      }
-  
-      console.error('Presigned URL generation for thumbnail failed:', error);
-      return NextResponse.json(
-        { 
-          error: 'Failed to generate upload URL',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }, 
-        { status: 500 }
-      );
+      handleError(error)
     }
   }

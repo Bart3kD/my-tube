@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
+import { NextResponse } from "next/server";
 import { twMerge } from "tailwind-merge"
+import z from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -45,4 +47,28 @@ export const ALLOWED_VIDEO_TYPES = [
 
 export function isValidVideoType(mimeType: string): boolean {
   return (ALLOWED_VIDEO_TYPES as readonly string[]).includes(mimeType);
+}
+
+export function handleError(error: unknown, zodErrorText: string, serverErrorText: string) {
+  if (error instanceof z.ZodError) {
+    return NextResponse.json(
+      { 
+        error: zodErrorText,
+        details: error.issues.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      }, 
+      { status: 400 }
+    );
+  }
+
+  console.error('API Error:', error);
+  return NextResponse.json(
+    { 
+      error: serverErrorText,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 
+    { status: 500 }
+  );
 }

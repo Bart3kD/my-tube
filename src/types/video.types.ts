@@ -85,3 +85,23 @@ export interface VideosResponse {
     hasMore: boolean;
   };
 }
+
+export interface CreateVideoData {
+  videoId: string;
+  title: string;
+  description?: string | null;
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+}
+
+export interface GetVideosQuery {
+  userId?: string;
+  limit: number;
+  offset: number;
+  isPublic?: boolean;
+}
+
+export interface VideoWhereClause {
+  userId?: string;
+  isPublic?: boolean;
+};
