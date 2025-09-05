@@ -58,6 +58,8 @@ export function VideoCard({ video }: VideoCardProps) {
               alt={video.title}
               className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
               onError={() => setImageError(true)}
+              width={100}
+              height={100}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
@@ -95,6 +97,8 @@ export function VideoCard({ video }: VideoCardProps) {
                   src={video.user.avatar}
                   alt={video.user.displayName}
                   className="w-10 h-10 rounded-full object-cover"
+                  width={100}
+                  height={100}
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
