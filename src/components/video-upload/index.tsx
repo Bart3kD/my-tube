@@ -265,7 +265,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
       }, 300);
 
       // Step 1: Get presigned URL for video
-      const videoResponse = await fetch('/api/upload/presigned-url', {
+      const videoResponse = await fetch('/api/aws-upload/video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -297,7 +297,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
       // Step 3: Upload thumbnail if exists
       let thumbnailUrl = null;
       if (videoDetails.thumbnail) {
-        const thumbnailResponse = await fetch('/api/upload/thumbnail', {
+        const thumbnailResponse = await fetch('/api/aws-upload/thumbnail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
