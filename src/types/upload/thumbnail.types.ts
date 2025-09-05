@@ -11,7 +11,7 @@ export const uploadThumbnailRequestSchema = z.object({
   fileType: z
     .string()
     .min(1, 'File type is required')
-    .startsWith('video/', 'File must be a video'), 
+    .startsWith('image/', 'File must be an image'), 
 
   fileSize: z
     .number()
