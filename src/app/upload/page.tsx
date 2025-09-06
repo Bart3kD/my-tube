@@ -1,11 +1,8 @@
 'use client';
 
 import VideoUpload from '@/components/video-upload';
-// import { useRouter } from 'next/navigation';
 
 export default function UploadPage() {
-  // const router = useRouter();
-  
   const handleUploadComplete = (videoUrl: string) => {
     console.log('Upload completed:', videoUrl);
   };

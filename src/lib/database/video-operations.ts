@@ -75,9 +75,16 @@ export async function checkVideoExists(videoId: string) {
 }
 
 export async function getVideos(query: GetVideosQuery) {
-  const { userId, limit, offset, isPublic } = query;
+  const { userId, limit, offset, isPublic, search } = query;
 
   const where: VideoWhereClause = {};
+
+  if (search) {
+    where.title = { 
+      contains: search, 
+      mode: 'insensitive' 
+    };
+  }
   
   if (userId) {
     where.userId = userId;

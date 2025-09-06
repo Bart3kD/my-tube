@@ -52,9 +52,14 @@ export interface GetVideosQuery {
   limit: number;
   offset: number;
   isPublic?: boolean;
+  search?: string;
 }
 
 export interface VideoWhereClause {
   userId?: string;
   isPublic?: boolean;
+  title?: {
+    contains: string;
+    mode: 'insensitive';
+  };
 };

@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
       userId: searchParams.get('userId') || undefined,
       limit: searchParams.get('limit') || undefined,
       offset: searchParams.get('offset') || undefined,
-      isPublic: searchParams.get('isPublic') || undefined
+      isPublic: searchParams.get('isPublic') || undefined,
+      search: searchParams.get('search') || undefined,
     };
 
     const validatedQuery = videoQuerySchema.parse(queryParams);
