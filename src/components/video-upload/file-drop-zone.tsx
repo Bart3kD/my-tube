@@ -96,7 +96,7 @@ export function FileDropZone({ selectedFile, onFileSelect, validationError }: Fi
                   Drop your video here, or click to browse
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Supports MP4, MOV, AVI (max 500MB)
+                  Supports MP4, MOV, AVI (max 100MB)
                 </p>
                 {validationError && (
                   <p className="text-sm text-red-500 mt-2">{validationError}</p>
