@@ -140,6 +140,8 @@ export function useVideoUpload() {
     setUploadProgress(0);
     clearErrors();
 
+    let progressInterval: ReturnType<typeof setInterval> | undefined = undefined;
+
     try {
       const uploadData = videoUploadRequestSchema.parse({
         fileName: state.selectedFile.name,
@@ -148,12 +150,12 @@ export function useVideoUpload() {
       });
 
       // Simulate progress
-        const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setState(prev => ({ 
             ...prev, 
             uploadProgress: Math.min(prev.uploadProgress + 5, 85) 
         }));
-        }, 300);
+      }, 300);
 
       // Step 1: Get presigned URL for video
       const videoResponse = await fetch('/api/aws-upload/video', {
@@ -177,6 +179,7 @@ export function useVideoUpload() {
         headers: { 'Content-Type': state.selectedFile.type }
       });
 
+      clearInterval(progressInterval);
       setUploadProgress(90);
 
       // Step 3: Upload thumbnail if exists
@@ -225,7 +228,6 @@ export function useVideoUpload() {
         throw new Error('Failed to save video metadata');
       }
 
-      clearInterval(progressInterval);
       setUploadProgress(100);
       onComplete?.(videoUrl);
 
@@ -242,6 +244,7 @@ export function useVideoUpload() {
 
     } catch (error) {
       console.error('Upload failed:', error);
+      clearInterval(progressInterval);
       setError('general', error instanceof Error ? error.message : 'Upload failed');
       setUploading(false);
     }
