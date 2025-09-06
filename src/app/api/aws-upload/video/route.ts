@@ -6,8 +6,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, BUCKET_NAME, S3_FOLDERS } from '@/lib/s3';
 import { generateId } from '@/lib/utils';
 
-import z from 'zod';
-import { uploadVideoRequestSchema } from '@/types/upload/video.types';
+import { videoFileSchema } from '@/schemas';
 
 import { handleError as baseHandleError } from '@/lib/utils';
 
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { fileName, fileType, fileSize } = body;
 
-    const validatedData = uploadVideoRequestSchema.parse({ fileName, fileType, fileSize });
+    const validatedData = videoFileSchema.parse({ fileName, fileType, fileSize });
 
     const videoId = generateId();
     const fileExtension = validatedData.fileName.split('.').pop();

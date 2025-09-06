@@ -5,7 +5,7 @@ import { createVideo, getVideos, checkVideoExists } from '@/lib/database/video-o
 import { findUserById } from '@/lib/database/user-operations';
 import { handleError as baseHandleError } from '@/lib/utils';
 
-import { createVideoSchema, getVideosQuerySchema } from '@/types/videos.api.types';
+import { createVideoSchema, videoQuerySchema } from '@/schemas';
 
 
 const VALIDATION_ERROR = 'Video validation failed';
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       isPublic: searchParams.get('isPublic') || undefined
     };
 
-    const validatedQuery = getVideosQuerySchema.parse(queryParams);
+    const validatedQuery = videoQuerySchema.parse(queryParams);
 
     const result = await getVideos(validatedQuery);
     return NextResponse.json(result);

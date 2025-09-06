@@ -10,7 +10,8 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, CheckCircle, Video, AlertCircle, Image } from 'lucide-react';
 import { z } from 'zod';
-import { thumbnailFileSchema, uploadRequestSchema, ValidationErrors, videoDetailsSchema, videoFileSchema } from '@/types/video.types';
+import { ValidationErrors } from '@/types/video.types';
+import { thumbnailFileSchema, videoUploadRequestSchema, videoDetailsSchema, videoFileSchema } from '@/schemas';
 
 interface VideoUploadProps {
   onUploadComplete?: (videoUrl: string) => void;
@@ -39,9 +40,9 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   const validateFile = (file: File): boolean => {
     try {
       videoFileSchema.parse({
-        name: file.name,
-        size: file.size,
-        type: file.type
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
       });
       
       setValidationErrors(prev => ({
@@ -66,9 +67,9 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
   const validateThumbnail = (file: File): boolean => {
     try {
       thumbnailFileSchema.parse({
-        name: file.name,
-        size: file.size,
-        type: file.type
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
       });
       
       setValidationErrors(prev => ({
@@ -257,7 +258,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
       };
 
       // Validate request data with Zod
-      const validatedUploadData = uploadRequestSchema.parse(uploadData);
+      const validatedUploadData = videoUploadRequestSchema.parse(uploadData);
 
       // Simulate upload progress
       const progressInterval = setInterval(() => {

@@ -5,7 +5,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, BUCKET_NAME, S3_FOLDERS } from '@/lib/s3';
 
-import { uploadThumbnailRequestSchema } from '@/types/upload/thumbnail.types';
+import { thumbnailFileSchema } from '@/schemas';
 
 import { handleError as baseHandleError } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { videoId, fileName, fileType, fileSize } = body;
 
-    const validatedData = uploadThumbnailRequestSchema.parse({ fileName, fileType, fileSize });
+    const validatedData = thumbnailFileSchema.parse({ fileName, fileType, fileSize });
 
     const fileExtension = validatedData.fileName.split('.').pop();
     const thumbnailFileName = `${videoId}.${fileExtension}`;
