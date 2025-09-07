@@ -47,13 +47,13 @@ export function VideoCard({ video }: VideoCardProps) {
   return (
     <Link href={`/watch/${video.id}`}>
       <Card
-        className="group cursor-pointer transition-all duration-200 hover:shadow-lg"
+        className="group py-1 md:py-4 border-none cursor-pointer transition-all duration-200"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         <CardContent className="p-0">
           {/* Thumbnail */}
-          <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-t-lg overflow-hidden">
+          <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             {video.thumbnailUrl && !imageError ? (
               <Image
                 src={video.thumbnailUrl}
@@ -88,7 +88,7 @@ export function VideoCard({ video }: VideoCardProps) {
             )}
           </div>
           {/* Video Info */}
-          <div className="p-4">
+          <div className='py-4'>
             {/* User Avatar & Title */}
             <div className="flex gap-3">
               <div className="flex-shrink-0">
@@ -108,7 +108,7 @@ export function VideoCard({ video }: VideoCardProps) {
               </div>
       
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm line-clamp-2 mb-1 group-hover:text-primary">
+                <h3 className="font-semibold text-sm line-clamp-2 mb-1 group-hover:text-primary ">
                   {video.title}
                 </h3>
       
