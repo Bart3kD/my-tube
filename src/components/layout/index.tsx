@@ -23,14 +23,12 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   Home
                 </Link>
-                <SignedIn>
-                  <Link 
-                    href="/upload" 
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Upload
-                  </Link>
-                </SignedIn>
+                <Link 
+                  href="/upload" 
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Upload
+                </Link>
               </nav>
             </div>
             
