@@ -77,6 +77,7 @@ export default function VideoUpload({ onUploadComplete }: VideoUploadProps) {
 
       {selectedFile && (
         <VideoDetailsForm
+        videoFile={selectedFile}
           videoDetails={videoDetails}
           validationErrors={validationErrors}
           isUploading={isUploading}

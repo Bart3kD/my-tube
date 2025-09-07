@@ -60,8 +60,8 @@ export function VideoCard({ video }: VideoCardProps) {
                 alt={video.title}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                 onError={() => setImageError(true)}
-                width={100}
-                height={100}
+                width={640}
+                height={360}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">

@@ -13,6 +13,8 @@
     "@aws-sdk/client-s3": "^3.879.0",
     "@aws-sdk/s3-request-presigner": "^3.879.0",
     "@clerk/nextjs": "^6.31.8",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@prisma/client": "^6.15.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "@radix-ui/react-avatar": "^1.1.10",
