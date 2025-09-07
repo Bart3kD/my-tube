@@ -73,7 +73,7 @@ export default function Layout({ children }: LayoutProps) {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Platform</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/videos" className="text-gray-600 hover:text-gray-900">Browse Videos</Link></li>
+                <li><Link href="/" className="text-gray-600 hover:text-gray-900">Browse Videos</Link></li>
                 <li><Link href="/upload" className="text-gray-600 hover:text-gray-900">Upload</Link></li>
               </ul>
             </div>
