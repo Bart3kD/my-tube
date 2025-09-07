@@ -31,7 +31,7 @@ export default function VideosPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container px-4 py-8 w-full max-w-none flex flex-col items-center">
+      <div className="container px-4 py-4 w-full max-w-none flex flex-col items-center">
         {/* <VideosHeader 
           totalVideos={pagination.total} 
           onRefresh={refresh}

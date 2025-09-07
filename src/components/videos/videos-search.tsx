@@ -9,8 +9,8 @@ interface VideosSearchProps {
 
 export function VideosSearch({ searchQuery, onSearchChange }: VideosSearchProps) {
   return (
-    <div className="absolute top-4 flex flex-col justify-center sm:flex-row gap-4 mb-8 z-50 container">
-      <div className="w-4/5 flex justify-center items-center relative">
+    <div className="flex flex-col justify-center sm:flex-row gap-4 px-10 py-2 container">
+      <div className="sm:w-4/5 flex justify-center items-center relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <Input
           placeholder="Search videos..."
