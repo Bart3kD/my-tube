@@ -1,64 +1,73 @@
-import Link from 'next/link';
-import { SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { VideosGrid } from '@/components/videos/videos-grid';
+import { VideosHeader } from '@/components/videos/videos-header';
+import { VideosSearch } from '@/components/videos/videos-search';
+import { useVideos } from '@/hooks/use-videos';
+import { useDebounce } from '@/hooks/use-debounce';
+
+export default function VideosPage() {
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 500);
+  
+  const {
+    videos,
+    loading,
+    error,
+    pagination,
+    loadMore,
+    refresh,
+    updateSearch
+  } = useVideos();
+
+  // Update search when debounced value changes
+  React.useEffect(() => {
+    updateSearch(debouncedSearch);
+  }, [debouncedSearch, updateSearch]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Welcome to YourTube Clone
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Upload, share, and discover amazing videos
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Upload Videos</h3>
-              <p className="text-gray-600 mb-4">Share your content with the world</p>
-              <Link 
-                href="/upload" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md inline-block"
-              >
-                Start Uploading
-              </Link>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Browse Videos</h3>
-              <p className="text-gray-600 mb-4">Discover amazing content</p>
-              <Link 
-                href="/videos" 
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md inline-block"
-              >
-                Browse Now
-              </Link>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">Your Channel</h3>
-              <p className="text-gray-600 mb-4">Manage your content</p>
-              <SignedOut>
-                <SignInButton>
-                  <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
-                    Sign In to Continue
-                  </button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <Link 
-                  href="/dashboard" 
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md inline-block"
-                >
-                  Go to Dashboard
-                </Link>
-              </SignedIn>
+    <div className="min-h-screen bg-background">
+      <div className="container px-4 py-8 w-full max-w-none flex flex-col items-center">
+        {/* <VideosHeader 
+          totalVideos={pagination.total} 
+          onRefresh={refresh}
+        /> */}
+
+        <VideosSearch 
+          searchQuery={searchInput}
+          onSearchChange={setSearchInput}
+        />
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <VideosGrid videos={videos} loading={loading && videos.length === 0} />
+
+        {pagination.hasMore && !loading && (
+          <div className="text-center mt-8">
+            <Button onClick={loadMore} variant="outline" size="lg">
+              Load More Videos
+            </Button>
+          </div>
+        )}
+
+        {loading && videos.length > 0 && (
+          <div className="text-center mt-8">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Loading more videos...
             </div>
           </div>
-        </div>
-      </main>
+        )}
+      </div>
     </div>
   );
 }

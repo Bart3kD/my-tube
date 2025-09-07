@@ -1,7 +1,7 @@
 export function WatchPageSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="container px-4 py-8 w-full">
+      <div className="container px-4 py-8 w-full max-w-none">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />

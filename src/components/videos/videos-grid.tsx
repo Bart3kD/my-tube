@@ -12,7 +12,7 @@ interface VideosGridProps {
 export function VideosGrid({ videos, loading = false }: VideosGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="space-y-3">
             <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
