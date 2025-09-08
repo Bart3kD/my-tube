@@ -42,7 +42,6 @@ export default function Layout({ children }: LayoutProps) {
               </SignedOut>
               <SignedIn>
                 <UserButton 
-                  afterSignOutUrl="/" 
                   appearance={{
                     elements: {
                       avatarBox: "w-8 h-8"
