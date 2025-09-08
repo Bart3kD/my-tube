@@ -14,12 +14,9 @@ export function VideoDescription({ description, views, createdAt }: VideoDescrip
   const shouldTruncate = description.length > 200;
 
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className='py-2 shadow-none'>
+      <CardContent className='px-2'>
         <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">
-            {formatViews(views)} views • {formatTimeAgo(createdAt)}
-          </div>
           <div className={`text-sm ${!showFull && shouldTruncate ? 'line-clamp-3' : ''}`}>
             {description}
           </div>
