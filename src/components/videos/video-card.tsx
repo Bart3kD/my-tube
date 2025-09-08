@@ -47,7 +47,7 @@ export function VideoCard({ video }: VideoCardProps) {
   return (
     <Link href={`/watch/${video.id}`}>
       <Card
-        className="group py-1 md:py-4 border-none cursor-pointer transition-all duration-200"
+        className="group py-1 md:py-4 border-none shadow-none cursor-pointer transition-all duration-200"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
