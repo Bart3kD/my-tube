@@ -14,7 +14,7 @@ export function useCommentForm(onSubmit: (content: string) => Promise<boolean>) 
       setComment('');
     }
     setIsSubmitting(false);
-  }, [comment, onSubmit]);
+  }, [comment, onSubmit]);  
 
   const handleCancel = useCallback(() => {
     setComment('');

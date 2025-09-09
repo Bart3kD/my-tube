@@ -1,87 +1,111 @@
+// src/app/api/videos/[videoId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
-import { findVideoById, incrementViews, deleteVideo } from '@/lib/database/video-operations';
-import { handleError as baseHandleError } from '@/lib/utils';
-
-const VALIDATION_ERROR = 'Invalid video request';
-const SERVER_ERROR = 'Failed to process video';
-
-const handleError = (error: unknown) => 
-  baseHandleError(error, VALIDATION_ERROR, SERVER_ERROR);
+import { prisma } from '@/lib/database/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ videoId: string }> }
+  { params }: { params: { videoId: string } }
 ) {
   try {
-    const { videoId } = await params;
+    const { videoId } = params;
 
-    if (!videoId) {
-      return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
-    }
-
-    const video = await findVideoById(videoId);
-    
-    if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
-    }
-
-    await incrementViews(videoId);
-
-    const response = {
-      video: {
-        id: video.id,
-        title: video.title,
-        description: video.description,
-        videoUrl: video.videoUrl,
-        thumbnailUrl: video.thumbnailUrl,
-        duration: video.duration,
-        views: video.views + 1,
-        likes: video.likes,
-        createdAt: video.createdAt,
-        user: video.user,
-        likeCount: video._count.videoLikes
-      },
-      comments: video.comments?.map(comment => ({
-        id: comment.id,
-        content: comment.content,
-        createdAt: comment.createdAt,
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: {
         user: {
-          id: comment.user.id,
-          displayName: comment.user.displayName || comment.user.username || 'Anonymous',
-          avatar: comment.user.avatar
+          select: {
+            id: true,
+            displayName: true,
+            avatar: true,
+            username: true,
+            channelName: true,
+            subscribersCount: true,
+          },
+        },
+        _count: {
+          select: {
+            videoLikes: {
+              where: { type: 'LIKE' }
+            }
+          }
         }
-      })) || []
+      },
+    });
+
+    if (!video) {
+      return NextResponse.json(
+        { error: 'Video not found' },
+        { status: 404 }
+      );
+    }
+
+    // Increment view count
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { views: { increment: 1 } },
+    });
+
+    // Transform the data to match expected structure
+    const videoResponse = {
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      videoUrl: video.videoUrl,
+      thumbnailUrl: video.thumbnailUrl,
+      views: video.views + 1, // Include the incremented view
+      likeCount: video._count.videoLikes,
+      createdAt: video.createdAt.toISOString(),
+      user: {
+        id: video.user.id,
+        displayName: video.user.displayName || video.user.username,
+        avatar: video.user.avatar,
+        username: video.user.username,
+        channelName: video.user.channelName || video.user.displayName || video.user.username,
+        subscribersCount: video.user.subscribersCount || 0,
+      },
     };
 
-    return NextResponse.json(response);
-
+    return NextResponse.json(videoResponse);
   } catch (error) {
-    return handleError(error);
+    console.error('Error fetching video:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch video' },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ videoId: string }> }
+  { params }: { params: { videoId: string } }
 ) {
   try {
-    const user = await currentUser();
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { videoId } = params;
+    const body = await request.json();
 
-    const { videoId } = await params;
-    
-    if (!videoId) {
-      return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
-    }
+    const video = await prisma.video.update({
+      where: { id: videoId },
+      data: body,
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            avatar: true,
+            username: true,
+            channelName: true,
+            subscribersCount: true,
+          },
+        },
+      },
+    });
 
-    await deleteVideo(videoId, user.id);
-    
-    return NextResponse.json({ success: true, message: 'Video deleted successfully' });
-
+    return NextResponse.json(video);
   } catch (error) {
-    return handleError(error);
+    console.error('Error updating video:', error);
+    return NextResponse.json(
+      { error: 'Failed to update video' },
+      { status: 500 }
+    );
   }
 }

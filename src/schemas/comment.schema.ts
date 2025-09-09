@@ -1,27 +1,29 @@
+// src/schemas/comment.schema.ts
 import { z } from 'zod';
-import { idSchema, paginationSchema } from './common.schema';
 
-export const createCommentSchema = z.object({
+export const commentCreateSchema = z.object({
   content: z
     .string()
     .min(1, 'Comment cannot be empty')
-    .max(1000, 'Comment must be less than 1000 characters')
+    .max(2000, 'Comment cannot exceed 2000 characters')
     .trim(),
-  videoId: idSchema,
-  parentId: idSchema.optional(), // For replies
+  parentId: z.string().optional(), // For replies
 });
 
-export const updateCommentSchema = z.object({
+export const commentUpdateSchema = z.object({
   content: z
     .string()
     .min(1, 'Comment cannot be empty')
-    .max(1000, 'Comment must be less than 1000 characters')
+    .max(2000, 'Comment cannot exceed 2000 characters')
     .trim(),
 });
 
-export const commentsQuerySchema = z.object({
-  ...paginationSchema.shape,
-  videoId: idSchema,
-  parentId: idSchema.optional(),
-  sortBy: z.enum(['newest', 'oldest', 'popular']).default('newest'),
+export const commentQuerySchema = z.object({
+  parentId: z.string().optional(),
+  limit: z.coerce.number().min(1).max(50).default(20),
+  cursor: z.string().optional(),
 });
+
+export type CommentCreate = z.infer<typeof commentCreateSchema>;
+export type CommentUpdate = z.infer<typeof commentUpdateSchema>;
+export type CommentQuery = z.infer<typeof commentQuerySchema>;
