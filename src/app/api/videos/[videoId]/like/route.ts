@@ -10,7 +10,7 @@ const likeSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -22,7 +22,7 @@ export async function POST(
       );
     }
 
-    const { videoId } = params;
+    const { videoId } = await params;
     const body = await request.json();
     
     // Validate request body
@@ -110,7 +110,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -119,7 +119,7 @@ export async function GET(
       return NextResponse.json({ isLiked: false, isDisliked: false });
     }
 
-    const { videoId } = params;
+    const { videoId } = await params;
 
     const userLike = await prisma.like.findUnique({
       where: {

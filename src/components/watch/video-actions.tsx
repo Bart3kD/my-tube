@@ -1,5 +1,8 @@
+// src/components/watch/video-actions.tsx
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, ThumbsDown, Share, Download, MoreHorizontal } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Share, CheckCircle } from 'lucide-react';
+import { formatLikes } from '@/utils/format';
+import { cn } from '@/lib/utils';
 
 interface VideoActionsProps {
   likeCount: number;
@@ -8,48 +11,69 @@ interface VideoActionsProps {
   onLike: () => void;
   onDislike: () => void;
   onShare: () => void;
+  isLoading?: boolean;
 }
 
-export function VideoActions({ 
-  likeCount, 
-  isLiked, 
-  isDisliked, 
-  onLike, 
-  onDislike, 
-  onShare 
+export function VideoActions({
+  likeCount,
+  isLiked,
+  isDisliked,
+  onLike,
+  onDislike,
+  onShare,
+  isLoading = false
 }: VideoActionsProps) {
   return (
     <div className="flex items-center space-x-2">
-      <Button
-        variant={isLiked ? "default" : "outline"}
-        size="sm"
-        onClick={onLike}
-        className="flex items-center space-x-2"
-      >
-        <ThumbsUp className="w-4 h-4" />
-        <span>{likeCount + (isLiked ? 1 : 0)}</span>
-      </Button>
+      <div className="flex items-center bg-secondary rounded-full">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onLike}
+          disabled={isLoading}
+          className={cn(
+            "rounded-l-full rounded-r-none px-4 py-2 h-9",
+            isLiked && "bg-blue-100 text-blue-600 hover:bg-blue-200"
+          )}
+        >
+          <ThumbsUp 
+            className={cn(
+              "w-4 h-4 mr-2", 
+              isLiked && "fill-current"
+            )} 
+          />
+          {formatLikes(likeCount)}
+        </Button>
+        
+        <div className="w-px h-6 bg-border" />
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDislike}
+          disabled={isLoading}
+          className={cn(
+            "rounded-r-full rounded-l-none px-4 py-2 h-9",
+            isDisliked && "bg-red-100 text-red-600 hover:bg-red-200"
+          )}
+        >
+          <ThumbsDown 
+            className={cn(
+              "w-4 h-4", 
+              isDisliked && "fill-current"
+            )} 
+          />
+        </Button>
+      </div>
 
       <Button
-        variant={isDisliked ? "default" : "outline"}
+        variant="secondary"
         size="sm"
-        onClick={onDislike}
+        onClick={onShare}
+        className="rounded-full px-4 py-2 h-9"
       >
-        <ThumbsDown className="w-4 h-4" />
-      </Button>
-
-      <Button variant="outline" size="sm" onClick={onShare}>
         <Share className="w-4 h-4 mr-2" />
         Share
-      </Button>
-
-      <Button variant="outline" size="sm">
-        <Download className="w-4 h-4 mr-2" />
-        Download
-      </Button>
-
-      <Button variant="outline" size="sm">
-        <MoreHorizontal className="w-4 h-4" />
       </Button>
     </div>
   );

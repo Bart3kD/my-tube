@@ -24,9 +24,11 @@ export default function WatchPage() {
     error,
     isLiked,
     isDisliked,
+    isLikeLoading,
     handleLike,
     handleDislike,
-    addComment
+    addComment,
+    addReply
   } = useVideoWatch(videoId);
 
   const handleShare = async () => {
@@ -81,6 +83,7 @@ export default function WatchPage() {
                 onLike={handleLike}
                 onDislike={handleDislike}
                 onShare={handleShare}
+                isLoading={isLikeLoading}
               />
             </div>
 
@@ -96,7 +99,11 @@ export default function WatchPage() {
               />
             )}
 
-            <CommentsSection comments={comments} onAddComment={addComment} />
+            <CommentsSection 
+              comments={comments} 
+              onAddComment={addComment}
+              onAddReply={addReply}
+            />
           </div>
 
           {/* Sidebar - TODO: Related Videos */}

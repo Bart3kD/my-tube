@@ -7,10 +7,10 @@ import { z } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
-    const { videoId } = params;
+    const { videoId } = await params;
 
     const comments = await prisma.comment.findMany({
       where: {
@@ -59,7 +59,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -71,7 +71,7 @@ export async function POST(
       );
     }
 
-    const { videoId } = params;
+    const { videoId } = await params;
     const body = await request.json();
     
     // Validate request body

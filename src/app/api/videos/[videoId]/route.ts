@@ -4,10 +4,10 @@ import { prisma } from '@/lib/database/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
-    const { videoId } = params;
+    const { videoId } = await params;
 
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -77,10 +77,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { videoId: string } }
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
-    const { videoId } = params;
+    const { videoId } = await params;
     const body = await request.json();
 
     const video = await prisma.video.update({

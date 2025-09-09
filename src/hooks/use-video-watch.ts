@@ -46,8 +46,9 @@ export function useVideoWatch(videoId: string) {
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
+  const [isLikeLoading, setIsLikeLoading] = useState(false);
 
-  // Fetch video details
+  // Fetch video details and like status
   useEffect(() => {
     async function fetchVideo() {
       try {
@@ -59,6 +60,20 @@ export function useVideoWatch(videoId: string) {
         
         const videoData = await response.json();
         setVideo(videoData);
+
+        // Fetch like status if user is signed in
+        if (isSignedIn && userId) {
+          try {
+            const likeResponse = await fetch(`/api/videos/${videoId}/like`);
+            if (likeResponse.ok) {
+              const likeData = await likeResponse.json();
+              setIsLiked(likeData.isLiked);
+              setIsDisliked(likeData.isDisliked);
+            }
+          } catch (err) {
+            console.error('Error fetching like status:', err);
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -69,7 +84,7 @@ export function useVideoWatch(videoId: string) {
     if (videoId) {
       fetchVideo();
     }
-  }, [videoId]);
+  }, [videoId, isSignedIn, userId]);
 
   // Fetch comments
   const fetchComments = useCallback(async () => {
@@ -94,9 +109,31 @@ export function useVideoWatch(videoId: string) {
   }, [videoId, fetchComments]);
 
   const handleLike = useCallback(async () => {
-    if (!isSignedIn || !userId) return;
+    if (!isSignedIn || !userId || isLikeLoading) return;
+
+    setIsLikeLoading(true);
+    const wasLiked = isLiked;
+    const wasDisliked = isDisliked;
 
     try {
+      // Optimistically update UI
+      if (wasLiked) {
+        setIsLiked(false);
+        setVideo(prev => prev ? {
+          ...prev,
+          likeCount: prev.likeCount - 1
+        } : null);
+      } else {
+        setIsLiked(true);
+        if (wasDisliked) {
+          setIsDisliked(false);
+        }
+        setVideo(prev => prev ? {
+          ...prev,
+          likeCount: prev.likeCount + 1
+        } : null);
+      }
+
       const response = await fetch(`/api/videos/${videoId}/like`, {
         method: 'POST',
         headers: {
@@ -105,25 +142,59 @@ export function useVideoWatch(videoId: string) {
         body: JSON.stringify({ type: 'LIKE' }),
       });
 
-      if (response.ok) {
-        setIsLiked(!isLiked);
-        if (isDisliked) setIsDisliked(false);
-        
-        // Update video like count optimistically
-        setVideo(prev => prev ? {
-          ...prev,
-          likeCount: isLiked ? prev.likeCount - 1 : prev.likeCount + 1
-        } : null);
+      if (!response.ok) {
+        throw new Error('Failed to update like');
       }
+
+      const result = await response.json();
+      
+      // Update based on server response
+      if (result.action === 'removed') {
+        setIsLiked(false);
+      } else if (result.action === 'created' || result.action === 'updated') {
+        setIsLiked(true);
+        if (result.action === 'updated') {
+          setIsDisliked(false);
+        }
+      }
+
     } catch (err) {
       console.error('Error liking video:', err);
+      
+      // Revert optimistic updates on error
+      setIsLiked(wasLiked);
+      setIsDisliked(wasDisliked);
+      setVideo(prev => prev ? {
+        ...prev,
+        likeCount: wasLiked ? prev.likeCount + 1 : prev.likeCount - 1
+      } : null);
+    } finally {
+      setIsLikeLoading(false);
     }
-  }, [videoId, isLiked, isDisliked, isSignedIn, userId]);
+  }, [videoId, isLiked, isDisliked, isSignedIn, userId, isLikeLoading]);
 
   const handleDislike = useCallback(async () => {
-    if (!isSignedIn || !userId) return;
+    if (!isSignedIn || !userId || isLikeLoading) return;
+
+    setIsLikeLoading(true);
+    const wasLiked = isLiked;
+    const wasDisliked = isDisliked;
 
     try {
+      // Optimistically update UI
+      if (wasDisliked) {
+        setIsDisliked(false);
+      } else {
+        setIsDisliked(true);
+        if (wasLiked) {
+          setIsLiked(false);
+          setVideo(prev => prev ? {
+            ...prev,
+            likeCount: prev.likeCount - 1
+          } : null);
+        }
+      }
+
       const response = await fetch(`/api/videos/${videoId}/like`, {
         method: 'POST',
         headers: {
@@ -132,21 +203,38 @@ export function useVideoWatch(videoId: string) {
         body: JSON.stringify({ type: 'DISLIKE' }),
       });
 
-      if (response.ok) {
-        setIsDisliked(!isDisliked);
-        if (isLiked) {
+      if (!response.ok) {
+        throw new Error('Failed to update dislike');
+      }
+
+      const result = await response.json();
+      
+      // Update based on server response
+      if (result.action === 'removed') {
+        setIsDisliked(false);
+      } else if (result.action === 'created' || result.action === 'updated') {
+        setIsDisliked(true);
+        if (result.action === 'updated') {
           setIsLiked(false);
-          // Decrease like count if was previously liked
-          setVideo(prev => prev ? {
-            ...prev,
-            likeCount: prev.likeCount - 1
-          } : null);
         }
       }
+
     } catch (err) {
       console.error('Error disliking video:', err);
+      
+      // Revert optimistic updates on error
+      setIsLiked(wasLiked);
+      setIsDisliked(wasDisliked);
+      if (wasLiked && !isLiked) {
+        setVideo(prev => prev ? {
+          ...prev,
+          likeCount: prev.likeCount + 1
+        } : null);
+      }
+    } finally {
+      setIsLikeLoading(false);
     }
-  }, [videoId, isLiked, isDisliked, isSignedIn, userId]);
+  }, [videoId, isLiked, isDisliked, isSignedIn, userId, isLikeLoading]);
 
   const addComment = useCallback(async (content: string): Promise<boolean> => {
     if (!isSignedIn || !userId) {
@@ -224,6 +312,7 @@ export function useVideoWatch(videoId: string) {
     error,
     isLiked,
     isDisliked,
+    isLikeLoading,
     handleLike,
     handleDislike,
     addComment,
